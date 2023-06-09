@@ -1,0 +1,9 @@
+{
+  "time": 0,
+  "summary": "string",
+  "icon": "string",
+  "block" : {
+    "number": 1.1,
+    "boolean": true
+  }
+}
