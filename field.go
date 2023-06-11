@@ -9,12 +9,13 @@ import (
 var fieldCache sync.Map
 
 type field struct {
-	name    string
-	typ     reflect.Type
-	hclTag  string
-	ctyTag  string
-	tagName string
-	index   []int
+	name      string
+	typ       reflect.Type
+	hclTag    string
+	ctyTag    string
+	tagName   string
+	index     []int
+	omitEmpty bool
 }
 
 type structFields []field
@@ -50,6 +51,10 @@ func newStructFields(rt reflect.Type) structFields {
 				name = camelcaseToSnakecase(f.Name)
 			}
 		}
+		omitEmpty := strings.Contains(ctyTag, ",omitempty")
+		if ctyTag == "" {
+			omitEmpty = strings.Contains(hclTag, ",omitempty")
+		}
 		if f.Anonymous && ft.Kind() == reflect.Struct {
 			embededFields := getStructFileds(ft)
 			for _, embededField := range embededFields {
@@ -60,12 +65,13 @@ func newStructFields(rt reflect.Type) structFields {
 		}
 		if !f.Anonymous && name != "" && f.IsExported() {
 			fields = append(fields, field{
-				name:    f.Name,
-				typ:     f.Type,
-				hclTag:  hclTag,
-				ctyTag:  ctyTag,
-				tagName: name,
-				index:   []int{i},
+				name:      f.Name,
+				typ:       f.Type,
+				hclTag:    hclTag,
+				ctyTag:    ctyTag,
+				tagName:   name,
+				index:     []int{i},
+				omitEmpty: omitEmpty,
 			})
 		}
 	}
