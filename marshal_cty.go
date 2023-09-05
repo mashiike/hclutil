@@ -4,7 +4,6 @@ import (
 	"encoding"
 	"errors"
 	"fmt"
-	"log"
 	"reflect"
 
 	"github.com/zclconf/go-cty/cty"
@@ -108,7 +107,6 @@ func marshalCTYValue(rv reflect.Value) (cty.Value, bool, error) {
 		}
 
 		if rv.Len() == 0 {
-			log.Printf("%s", rt.Elem())
 			switch rt.Elem().Kind() {
 			case reflect.String:
 				return cty.MapValEmpty(cty.String), true, nil
