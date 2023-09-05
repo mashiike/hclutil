@@ -2,6 +2,7 @@ package hclutil
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"io/fs"
 	"os"
@@ -148,17 +149,17 @@ func Parse(p string) (hcl.Body, *DiagnosticsWriter, hcl.Diagnostics) {
 			}}
 		}
 	}
-	return parseFS(parser, os.DirFS(p).(fs.ReadDirFS))
+	return parseFS(parser, os.DirFS(p))
 }
 
 // ParseFS は与えられたfs.ReadDirFSをHCLとして解析します。
-func ParseFS(fileSystem fs.ReadDirFS) (hcl.Body, *DiagnosticsWriter, hcl.Diagnostics) {
+func ParseFS(fsys fs.FS) (hcl.Body, *DiagnosticsWriter, hcl.Diagnostics) {
 	parser := hclparse.NewParser()
-	return parseFS(parser, fileSystem)
+	return parseFS(parser, fsys)
 }
 
-func parseFS(parser *hclparse.Parser, fileSystem fs.ReadDirFS) (hcl.Body, *DiagnosticsWriter, hcl.Diagnostics) {
-	entires, err := fileSystem.ReadDir(".")
+func parseFS(parser *hclparse.Parser, fsys fs.FS) (hcl.Body, *DiagnosticsWriter, hcl.Diagnostics) {
+	entires, err := fs.ReadDir(fsys, ".")
 	if err != nil {
 		return nil, newDiagnosticsWriter(parser.Files()), hcl.Diagnostics{{
 			Severity: hcl.DiagError,
@@ -172,34 +173,44 @@ func parseFS(parser *hclparse.Parser, fileSystem fs.ReadDirFS) (hcl.Body, *Diagn
 		if entry.IsDir() {
 			continue
 		}
-		bs, err := func() ([]byte, error) {
-			f, err := fileSystem.Open(entry.Name())
+		opener := func() ([]byte, bool) {
+			f, err := fsys.Open(entry.Name())
 			if err != nil {
-				return nil, err
+				diags = append(diags, &hcl.Diagnostic{
+					Severity: hcl.DiagError,
+					Summary:  fmt.Sprintf("Failed to open file %s", entry.Name()),
+					Detail:   err.Error(),
+				})
+				return nil, false
 			}
 			defer func() {
 				if err := f.Close(); err != nil {
 					diags = append(diags, &hcl.Diagnostic{
 						Severity: hcl.DiagError,
-						Summary:  "Failed to close file",
+						Summary:  fmt.Sprintf("Failed to close file %s", entry.Name()),
 						Detail:   err.Error(),
 					})
 				}
 			}()
-			return io.ReadAll(f)
-		}()
-		if err != nil {
-			diags = append(diags, &hcl.Diagnostic{
-				Severity: hcl.DiagError,
-				Summary:  "Failed to read file",
-				Detail:   err.Error(),
-			})
-			continue
+			bs, err := io.ReadAll(f)
+			if err != nil {
+				diags = append(diags, &hcl.Diagnostic{
+					Severity: hcl.DiagError,
+					Summary:  fmt.Sprintf("Failed to read file %s", entry.Name()),
+					Detail:   err.Error(),
+				})
+				return nil, false
+			}
+			return bs, true
 		}
 
 		ext := filepath.Ext(entry.Name())
 		// if ext is .hcl execute parser.ParseHCL
 		if ext == ".hcl" {
+			bs, ok := opener()
+			if !ok {
+				continue
+			}
 			file, d := parser.ParseHCL(bs, entry.Name())
 			files = append(files, file)
 			diags = append(diags, d...)
@@ -207,6 +218,10 @@ func parseFS(parser *hclparse.Parser, fileSystem fs.ReadDirFS) (hcl.Body, *Diagn
 		}
 		// if entity.Name() is *.hcl.json execute parser.ParseJSONFile
 		if ext != ".json" {
+			continue
+		}
+		bs, ok := opener()
+		if !ok {
 			continue
 		}
 		baseName := filepath.Base(entry.Name())
