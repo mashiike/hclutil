@@ -105,6 +105,19 @@ func marshalCTYValue(rv reflect.Value) (cty.Value, bool, error) {
 				return cty.UnknownVal(cty.DynamicPseudoType), true, fmt.Errorf("unsupported map key type: %s", rt.Key())
 			}
 		}
+
+		if rv.Len() == 0 {
+			switch rt.Elem().Kind() {
+			case reflect.String:
+				return cty.MapValEmpty(cty.String), true, nil
+			case reflect.Bool:
+				return cty.MapValEmpty(cty.Bool), true, nil
+			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Float32, reflect.Float64:
+				return cty.MapValEmpty(cty.Number), true, nil
+			default:
+				return cty.MapValEmpty(cty.DynamicPseudoType), true, nil
+			}
+		}
 		valueMap := make(map[string]cty.Value, rv.Len())
 		for _, key := range rv.MapKeys() {
 			var keyStr string

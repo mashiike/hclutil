@@ -334,6 +334,26 @@ func TestMarshalCTYValue__Map(t *testing.T) {
 			}
 		}
 	})
+	t.Run("empty", func(t *testing.T) {
+		t.Parallel()
+		v := map[string]string{}
+		got, err := hclutil.MarshalCTYValue(v)
+		if err != nil {
+			t.Error(err)
+			t.FailNow()
+		}
+		want := cty.MapValEmpty(cty.String)
+		if got.Type().GoString() != want.Type().GoString() {
+			t.Errorf("got type = %s, want %s", got.Type(), want.Type())
+			t.FailNow()
+		}
+		mapGot := got.AsValueMap()
+		mapWant := want.AsValueMap()
+		if len(mapGot) != len(mapWant) {
+			t.Errorf("got = %s, want %s", got, want)
+			t.FailNow()
+		}
+	})
 }
 
 func TestMarshalCTYValue__Struct(t *testing.T) {
