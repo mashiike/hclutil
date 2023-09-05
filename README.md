@@ -1,5 +1,5 @@
 # hclutil
-HCL utilitiy for Golang
+HCL utility for Golang
 
 
 [![GoDoc](https://godoc.org/github.com/mashiike/hclutil?status.svg)](https://godoc.org/github.com/mashiike/hclutil)
