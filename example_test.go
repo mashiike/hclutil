@@ -6,7 +6,9 @@ import (
 	"testing/fstest"
 	"time"
 
+	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
+	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/mashiike/hclutil"
 	"github.com/zclconf/go-cty/cty"
 )
@@ -107,4 +109,21 @@ func ExampleUnmarshalCTYValue() {
 	// Output:
 	// name: Alice
 	// age: 12
+}
+
+func ExampleVersionConstraints() {
+	var vc hclutil.VersionConstraints
+	expr, diags := hclsyntax.ParseExpression([]byte(`">= 1.0.0, < 2.0.0"`), "", hcl.Pos{Line: 1, Column: 1})
+	if diags.HasErrors() {
+		log.Fatal("parse failed")
+	}
+	diags = vc.DecodeExpression(expr, hclutil.NewEvalContext())
+	if diags.HasErrors() {
+		log.Fatal("parse failed")
+	}
+	fmt.Println(vc)
+	fmt.Println("v1.2.0 is satisfied:", vc.IsSutisfied("v1.2.0"))
+	// Output:
+	// {>= 1.0.0, < 2.0.0}
+	// v1.2.0 is satisfied: true
 }

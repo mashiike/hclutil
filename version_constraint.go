@@ -5,12 +5,35 @@ import (
 	"fmt"
 
 	goVersion "github.com/hashicorp/go-version"
+	"github.com/hashicorp/hcl/v2"
 	"github.com/zclconf/go-cty/cty"
 )
 
 // VersionConstraints is a wrapper of goVersion.Constraints to implement CTYValueMarshaler and CTYValueUnmarshaler interface.
 type VersionConstraints struct {
 	goVersion.Constraints
+}
+
+func (vc *VersionConstraints) String() string {
+	if vc == nil {
+		return ""
+	}
+	return vc.Constraints.String()
+}
+
+func (vc *VersionConstraints) DecodeExpression(expr hcl.Expression, ctx *hcl.EvalContext) hcl.Diagnostics {
+	v, diags := expr.Value(ctx)
+	if diags.HasErrors() {
+		return diags
+	}
+	if err := vc.UnmarshalCTYValue(v); err != nil {
+		return hcl.Diagnostics{{
+			Severity: hcl.DiagError,
+			Summary:  "Invalid version constraint",
+			Detail:   err.Error(),
+		}}
+	}
+	return nil
 }
 
 func (vc *VersionConstraints) UnmarshalCTYValue(value cty.Value) error {
@@ -74,4 +97,15 @@ func (vc *VersionConstraints) ValidateVersion(str string) error {
 		return &VersionConstraintNotSatisfiedError{Constraint: vc, Version: str}
 	}
 	return nil
+}
+
+func (vc *VersionConstraints) IsSutisfied(str string) bool {
+	if vc == nil {
+		return true
+	}
+	v, err := goVersion.NewVersion(str)
+	if err != nil {
+		return false
+	}
+	return vc.Check(v)
 }
