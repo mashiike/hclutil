@@ -3,6 +3,7 @@ package hclutil
 import (
 	"errors"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sync"
@@ -147,7 +148,17 @@ func Parse(p string) (hcl.Body, *DiagnosticsWriter, hcl.Diagnostics) {
 			}}
 		}
 	}
-	entires, err := os.ReadDir(p)
+	return parseFS(parser, os.DirFS(p).(fs.ReadDirFS))
+}
+
+// ParseFS は与えられたfs.ReadDirFSをHCLとして解析します。
+func ParseFS(fileSystem fs.ReadDirFS) (hcl.Body, *DiagnosticsWriter, hcl.Diagnostics) {
+	parser := hclparse.NewParser()
+	return parseFS(parser, fileSystem)
+}
+
+func parseFS(parser *hclparse.Parser, fileSystem fs.ReadDirFS) (hcl.Body, *DiagnosticsWriter, hcl.Diagnostics) {
+	entires, err := fileSystem.ReadDir(".")
 	if err != nil {
 		return nil, newDiagnosticsWriter(parser.Files()), hcl.Diagnostics{{
 			Severity: hcl.DiagError,
@@ -161,10 +172,35 @@ func Parse(p string) (hcl.Body, *DiagnosticsWriter, hcl.Diagnostics) {
 		if entry.IsDir() {
 			continue
 		}
-		// if ext is .hcl execute parser.ParseHCLFile
+		bs, err := func() ([]byte, error) {
+			f, err := fileSystem.Open(entry.Name())
+			if err != nil {
+				return nil, err
+			}
+			defer func() {
+				if err := f.Close(); err != nil {
+					diags = append(diags, &hcl.Diagnostic{
+						Severity: hcl.DiagError,
+						Summary:  "Failed to close file",
+						Detail:   err.Error(),
+					})
+				}
+			}()
+			return io.ReadAll(f)
+		}()
+		if err != nil {
+			diags = append(diags, &hcl.Diagnostic{
+				Severity: hcl.DiagError,
+				Summary:  "Failed to read file",
+				Detail:   err.Error(),
+			})
+			continue
+		}
+
 		ext := filepath.Ext(entry.Name())
+		// if ext is .hcl execute parser.ParseHCL
 		if ext == ".hcl" {
-			file, d := parser.ParseHCLFile(filepath.Join(p, entry.Name()))
+			file, d := parser.ParseHCL(bs, entry.Name())
 			files = append(files, file)
 			diags = append(diags, d...)
 			continue
@@ -176,7 +212,7 @@ func Parse(p string) (hcl.Body, *DiagnosticsWriter, hcl.Diagnostics) {
 		baseName := filepath.Base(entry.Name())
 		fileNameWithoutExt := baseName[:len(baseName)-len(ext)]
 		if filepath.Ext(fileNameWithoutExt) == ".hcl" {
-			file, d := parser.ParseJSONFile(filepath.Join(p, entry.Name()))
+			file, d := parser.ParseJSON(bs, entry.Name())
 			files = append(files, file)
 			diags = append(diags, d...)
 		}
