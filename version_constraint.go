@@ -8,6 +8,7 @@ import (
 	"github.com/zclconf/go-cty/cty"
 )
 
+// VersionConstraints is a wrapper of goVersion.Constraints to implement CTYValueMarshaler and CTYValueUnmarshaler interface.
 type VersionConstraints struct {
 	goVersion.Constraints
 }
@@ -37,6 +38,7 @@ func (vc *VersionConstraints) MarshalCTYValue() (cty.Value, error) {
 	return cty.StringVal(vc.String()), nil
 }
 
+// InvalidVersionError is an error type for invalid version.
 type InvalidVersionError struct {
 	Version string
 	err     error
@@ -50,6 +52,7 @@ func (err *InvalidVersionError) Unwrap() error {
 	return err.err
 }
 
+// VersionConstraintNotSatisfiedError is an error type for version constraint not satisfied.
 type VersionConstraintNotSatisfiedError struct {
 	Constraint *VersionConstraints
 	Version    string
