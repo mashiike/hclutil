@@ -149,16 +149,16 @@ func Parse(p string) (hcl.Body, *DiagnosticsWriter, hcl.Diagnostics) {
 			}}
 		}
 	}
-	return parseFS(parser, os.DirFS(p))
+	return parseFS(p, parser, os.DirFS(p))
 }
 
 // ParseFS は与えられたfs.ReadDirFSをHCLとして解析します。
 func ParseFS(fsys fs.FS) (hcl.Body, *DiagnosticsWriter, hcl.Diagnostics) {
 	parser := hclparse.NewParser()
-	return parseFS(parser, fsys)
+	return parseFS("", parser, fsys)
 }
 
-func parseFS(parser *hclparse.Parser, fsys fs.FS) (hcl.Body, *DiagnosticsWriter, hcl.Diagnostics) {
+func parseFS(path string, parser *hclparse.Parser, fsys fs.FS) (hcl.Body, *DiagnosticsWriter, hcl.Diagnostics) {
 	entires, err := fs.ReadDir(fsys, ".")
 	if err != nil {
 		return nil, newDiagnosticsWriter(parser.Files()), hcl.Diagnostics{{
@@ -205,13 +205,14 @@ func parseFS(parser *hclparse.Parser, fsys fs.FS) (hcl.Body, *DiagnosticsWriter,
 		}
 
 		ext := filepath.Ext(entry.Name())
+		entryPath := filepath.Join(path, entry.Name())
 		// if ext is .hcl execute parser.ParseHCL
 		if ext == ".hcl" {
 			bs, ok := opener()
 			if !ok {
 				continue
 			}
-			file, d := parser.ParseHCL(bs, entry.Name())
+			file, d := parser.ParseHCL(bs, entryPath)
 			files = append(files, file)
 			diags = append(diags, d...)
 			continue
@@ -227,7 +228,7 @@ func parseFS(parser *hclparse.Parser, fsys fs.FS) (hcl.Body, *DiagnosticsWriter,
 		baseName := filepath.Base(entry.Name())
 		fileNameWithoutExt := baseName[:len(baseName)-len(ext)]
 		if filepath.Ext(fileNameWithoutExt) == ".hcl" {
-			file, d := parser.ParseJSON(bs, entry.Name())
+			file, d := parser.ParseJSON(bs, entryPath)
 			files = append(files, file)
 			diags = append(diags, d...)
 		}
