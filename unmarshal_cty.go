@@ -7,6 +7,7 @@ import (
 	"github.com/zclconf/go-cty/cty"
 )
 
+// UnmarshalCTYValue decodes a cty.Value into the value pointed to by v.
 func UnmarshalCTYValue(value cty.Value, v any) error {
 	if !value.IsKnown() {
 		return &UnknownValueError{Value: value}

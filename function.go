@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -20,10 +21,33 @@ import (
 	"github.com/zclconf/go-cty/cty/function/stdlib"
 )
 
+type NewEvalContextOptions struct {
+	fsyss []fs.FS
+}
+
+// WithFilePath は file関数やtemplatefile関数で参照するファイルのパスを追加します。
+func WithFilePath(path string) func(*NewEvalContextOptions) {
+	return func(opts *NewEvalContextOptions) {
+		opts.fsyss = append(opts.fsyss, os.DirFS(path))
+	}
+}
+
+// Withfsys は file関数やtemplatefile関数で参照するファイルシステムを追加します。
+func WithFS(baseFS fs.FS) func(*NewEvalContextOptions) {
+	return func(opts *NewEvalContextOptions) {
+		opts.fsyss = append(opts.fsyss, baseFS)
+	}
+}
+
 // NewEvalContext は よく使う基本的な関数を登録したEvalContextを作成します。
 // NewEvalContext creates an EvalContext with basic functions.
-func NewEvalContext() *hcl.EvalContext {
-	return &hcl.EvalContext{
+func NewEvalContext(optFns ...func(*NewEvalContextOptions)) *hcl.EvalContext {
+	opts := &NewEvalContextOptions{}
+	for _, optFn := range optFns {
+		optFn(opts)
+	}
+
+	evalCtx := &hcl.EvalContext{
 		Functions: map[string]function.Function{
 			"abs":              stdlib.AbsoluteFunc,
 			"add":              stdlib.AddFunc,
@@ -91,6 +115,10 @@ func NewEvalContext() *hcl.EvalContext {
 			"zipmap":           stdlib.ZipmapFunc,
 		},
 	}
+
+	evalCtx.Functions["file"] = MakeFileFunc(opts.fsyss...)
+	evalCtx.Functions["templatefile"] = MakeTemplateFileFunc(evalCtx, opts.fsyss...)
+	return evalCtx
 }
 
 var MustEnvFunc = function.New(&function.Spec{
@@ -142,36 +170,39 @@ var EnvFunc = function.New(&function.Spec{
 	},
 })
 
-func openFile(path string, basePaths ...string) ([]byte, error) {
-	var targetPath string
-	if filepath.IsAbs(path) {
-		targetPath = path
-	} else {
-		if wd, err := os.Getwd(); err == nil {
-			basePaths = append(basePaths, wd)
+func openFile(path string, baseFSs ...fs.FS) ([]byte, error) {
+	for _, baseFS := range baseFSs {
+		if _, err := fs.Stat(baseFS, path); err != nil {
+			continue
 		}
-		for _, basePath := range basePaths {
-			path := filepath.Join(basePath, path)
-			if _, err := os.Stat(path); err != nil {
-				continue
-			}
-			targetPath = path
-			break
+		fp, err := baseFS.Open(path)
+		if err != nil {
+			return nil, err
 		}
+		defer fp.Close()
+		bs, err := io.ReadAll(fp)
+		if err != nil {
+			return nil, err
+		}
+		return bs, nil
 	}
-	if targetPath == "" {
-		return nil, fmt.Errorf("%s not found", path)
+	if wd, err := os.Getwd(); err != nil {
+		target := filepath.Join(wd, path)
+		if _, err := os.Stat(target); err != nil {
+			return nil, err
+		}
+		fp, err := os.Open(target)
+		if err != nil {
+			return nil, err
+		}
+		defer fp.Close()
+		bs, err := io.ReadAll(fp)
+		if err != nil {
+			return nil, err
+		}
+		return bs, nil
 	}
-	fp, err := os.Open(targetPath)
-	if err != nil {
-		return nil, err
-	}
-	defer fp.Close()
-	bs, err := io.ReadAll(fp)
-	if err != nil {
-		return nil, err
-	}
-	return bs, nil
+	return nil, fmt.Errorf("%s: %w", path, fs.ErrNotExist)
 }
 
 // MakeFileFunc は file 関数を作成して返します。これは、指定されたパスのファイルを読み込んで返すHCLの関数です。
@@ -185,7 +216,7 @@ func openFile(path string, basePaths ...string) ([]byte, error) {
 // ```
 // text = file("path/to/file")
 // ```
-func MakeFileFunc(basePaths ...string) function.Function {
+func MakeFileFunc(baseFSs ...fs.FS) function.Function {
 	return function.New(&function.Spec{
 		Params: []function.Parameter{
 			{
@@ -197,7 +228,7 @@ func MakeFileFunc(basePaths ...string) function.Function {
 		Type: function.StaticReturnType(cty.String),
 		Impl: func(args []cty.Value, retType cty.Type) (cty.Value, error) {
 			pathArg, pathMarks := args[0].Unmark()
-			content, err := openFile(pathArg.AsString(), basePaths...)
+			content, err := openFile(pathArg.AsString(), baseFSs...)
 			if err != nil {
 				err = function.NewArgError(0, err)
 				return cty.UnknownVal(cty.String), err
@@ -217,7 +248,7 @@ func MakeFileFunc(basePaths ...string) function.Function {
 // ```
 // text = templatefile("path/to/file", {key = "value"})
 // ```
-func MakeTemplateFileFunc(newEvalContext func() *hcl.EvalContext, basePaths ...string) function.Function {
+func MakeTemplateFileFunc(ctx *hcl.EvalContext, baseFSs ...fs.FS) function.Function {
 	render := func(args []cty.Value) (cty.Value, error) {
 		if len(args) != 2 {
 			return cty.UnknownVal(cty.DynamicPseudoType), errors.New("require argument length 2")
@@ -227,7 +258,7 @@ func MakeTemplateFileFunc(newEvalContext func() *hcl.EvalContext, basePaths ...s
 		}
 		pathArg, pathMarks := args[0].Unmark()
 		targetFile := pathArg.AsString()
-		src, err := openFile(targetFile, basePaths...)
+		src, err := openFile(targetFile, baseFSs...)
 		if err != nil {
 			err = function.NewArgError(0, err)
 			return cty.UnknownVal(cty.DynamicPseudoType), err
@@ -236,7 +267,6 @@ func MakeTemplateFileFunc(newEvalContext func() *hcl.EvalContext, basePaths ...s
 		if diags.HasErrors() {
 			return cty.UnknownVal(cty.DynamicPseudoType), diags
 		}
-		ctx := newEvalContext()
 		ctx = ctx.NewChild()
 		ctx.Variables = args[1].AsValueMap()
 		value, diags := expr.Value(ctx)

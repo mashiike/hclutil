@@ -9,6 +9,7 @@ import (
 	"github.com/zclconf/go-cty/cty"
 )
 
+// CTYValueUnmarshaler is the interface implemented by types that can unmarshal
 type CTYValueMarshaler interface {
 	MarshalCTYValue() (cty.Value, error)
 }

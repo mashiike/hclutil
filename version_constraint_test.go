@@ -25,8 +25,12 @@ func TestVersionConstraints(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		if v.GoString() == cty.StringVal(">= 1.2.3").GoString() {
-			t.Errorf("v = %s, want >= 1.2.3", v)
+		if v.Type() != cty.String {
+			t.Errorf("v.Type() = %s, want string", v.Type())
+			t.FailNow()
+		}
+		if v.AsString() != ">= 1.2.3" {
+			t.Errorf("v = %s, want >= 1.2.3", v.AsString())
 		}
 	})
 }
