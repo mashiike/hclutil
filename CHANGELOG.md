@@ -1,5 +1,8 @@
 # Changelog
 
+## [v0.3.0](https://github.com/mashiike/hclutil/compare/v0.2.0...v0.3.0) - 2023-09-13
+- MergeVariables utils by @mashiike in https://github.com/mashiike/hclutil/pull/12
+
 ## [v0.2.0](https://github.com/mashiike/hclutil/compare/v0.1.0...v0.2.0) - 2023-09-06
 - fix empty map panic by @mashiike in https://github.com/mashiike/hclutil/pull/3
 - Bump golang.org/x/sys from 0.0.0-20210615035016-665e8c7367d1 to 0.1.0 by @dependabot in https://github.com/mashiike/hclutil/pull/2
