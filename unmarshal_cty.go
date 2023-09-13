@@ -4,11 +4,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/hashicorp/hcl/v2"
-	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/zclconf/go-cty/cty"
-	"github.com/zclconf/go-cty/cty/function"
-	"github.com/zclconf/go-cty/cty/function/stdlib"
 )
 
 // UnmarshalCTYValue decodes a cty.Value into the value pointed to by v.
@@ -339,35 +335,4 @@ func (e *UnmarshalTypeError) Error() string {
 
 func (e *UnmarshalTypeError) Unwrap() error {
 	return e.Detail
-}
-
-var (
-	exprStr = `jsonencode(var)`
-	expr    hcl.Expression
-)
-
-func init() {
-	var diags hcl.Diagnostics
-	expr, diags = hclsyntax.ParseExpression([]byte(exprStr), "cty_value_to_json.hcl", hcl.Pos{Line: 1, Column: 1})
-	if diags.HasErrors() {
-		panic(fmt.Sprintf("hclutil: failed to parse expression %s: %s", exprStr, diags.Error()))
-	}
-}
-
-func ctyValueToJSON(value cty.Value) ([]byte, error) {
-	if !value.IsKnown() {
-		return nil, &UnknownValueError{Value: value}
-	}
-	v, diags := expr.Value(&hcl.EvalContext{
-		Variables: map[string]cty.Value{
-			"var": value,
-		},
-		Functions: map[string]function.Function{
-			"jsonencode": stdlib.JSONEncodeFunc,
-		},
-	})
-	if diags.HasErrors() {
-		return nil, fmt.Errorf("convert cty.Value to JSON: %w", diags)
-	}
-	return []byte(v.AsString()), nil
 }
