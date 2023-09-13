@@ -2,6 +2,7 @@ package hclutil
 
 import (
 	"encoding"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
@@ -25,6 +26,7 @@ func MarshalCTYValue(v any) (cty.Value, error) {
 
 var (
 	marshalerType     = reflect.TypeOf((*CTYValueMarshaler)(nil)).Elem()
+	jsonMarshalerType = reflect.TypeOf((*json.Marshaler)(nil)).Elem()
 	textMarshalerType = reflect.TypeOf((*encoding.TextMarshaler)(nil)).Elem()
 )
 
@@ -44,6 +46,30 @@ func marshalCTYValue(rv reflect.Value) (cty.Value, bool, error) {
 		m := rv.Interface().(CTYValueMarshaler)
 		value, err := m.MarshalCTYValue()
 		return value, value.IsNull() || !value.IsKnown(), err
+	}
+	if rt.Kind() != reflect.Ptr && canAddr && reflect.PtrTo(rt).Implements(jsonMarshalerType) {
+		m := rv.Addr().Interface().(json.Marshaler)
+		b, err := m.MarshalJSON()
+		if err != nil {
+			return cty.UnknownVal(cty.DynamicPseudoType), false, err
+		}
+		val, err := jsonToCTYValue(b)
+		if err != nil {
+			return cty.UnknownVal(cty.DynamicPseudoType), false, err
+		}
+		return val, val.IsNull(), nil
+	}
+	if rt.Implements(jsonMarshalerType) && canInterface {
+		m := rv.Interface().(json.Marshaler)
+		b, err := m.MarshalJSON()
+		if err != nil {
+			return cty.UnknownVal(cty.DynamicPseudoType), false, err
+		}
+		val, err := jsonToCTYValue(b)
+		if err != nil {
+			return cty.UnknownVal(cty.DynamicPseudoType), false, err
+		}
+		return val, false, nil
 	}
 	if rt.Kind() != reflect.Ptr && canAddr && reflect.PtrTo(rt).Implements(textMarshalerType) {
 		m := rv.Addr().Interface().(encoding.TextMarshaler)

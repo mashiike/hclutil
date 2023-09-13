@@ -2,6 +2,7 @@ package hclutil
 
 import (
 	"encoding"
+	"encoding/json"
 	"reflect"
 )
 
@@ -14,7 +15,12 @@ import (
 // その過程で、CTYUnmarshalerに遭遇したらその時点で打ち切ります。
 // また、decodingTextが有効である場合は、encoding.TextUnmarshalerを実装している場合にも打ち切ります。j@w
 // decodingNullがtrueの場合は、nilを設定できる最初のポインタで打ち切ります。
-func indirect(v reflect.Value, decodingNull bool) (CTYValueUnmarshaler, encoding.TextUnmarshaler, reflect.Value) {
+func indirect(v reflect.Value, decodingNull bool) (
+	CTYValueUnmarshaler,
+	json.Unmarshaler,
+	encoding.TextUnmarshaler,
+	reflect.Value,
+) {
 	v0 := v
 	haveAddr := false
 
@@ -50,11 +56,14 @@ func indirect(v reflect.Value, decodingNull bool) (CTYValueUnmarshaler, encoding
 		}
 		if v.Type().NumMethod() > 0 && v.CanInterface() {
 			if u, ok := v.Interface().(CTYValueUnmarshaler); ok {
-				return u, nil, reflect.Value{}
+				return u, nil, nil, v
+			}
+			if u, ok := v.Interface().(json.Unmarshaler); ok {
+				return nil, u, nil, v
 			}
 			if !decodingNull {
 				if u, ok := v.Interface().(encoding.TextUnmarshaler); ok {
-					return nil, u, reflect.Value{}
+					return nil, nil, u, v
 				}
 			}
 		}
@@ -66,5 +75,5 @@ func indirect(v reflect.Value, decodingNull bool) (CTYValueUnmarshaler, encoding
 			v = v.Elem()
 		}
 	}
-	return nil, nil, v
+	return nil, nil, nil, v
 }

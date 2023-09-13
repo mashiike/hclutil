@@ -47,9 +47,16 @@ func unmarshalCTYValue(value cty.Value, rv reflect.Value) error {
 }
 
 func unmarshalCTYList(value cty.Value, rv reflect.Value) error {
-	u, ut, pv := indirect(rv, value.IsNull())
+	u, uj, ut, pv := indirect(rv, value.IsNull())
 	if u != nil {
 		return u.UnmarshalCTYValue(value)
+	}
+	if uj != nil {
+		bs, err := ctyValueToJSON(value)
+		if err != nil {
+			return &UnmarshalTypeError{CTYType: value.Type(), Type: rv.Type(), Detail: err}
+		}
+		return uj.UnmarshalJSON(bs)
 	}
 	if ut != nil {
 		return &UnmarshalTypeError{CTYType: value.Type(), Type: rv.Type()}
@@ -87,9 +94,16 @@ func unmarshalCTYList(value cty.Value, rv reflect.Value) error {
 }
 
 func unmarshalCTYObject(value cty.Value, rv reflect.Value) error {
-	u, ut, pv := indirect(rv, value.IsNull())
+	u, uj, ut, pv := indirect(rv, value.IsNull())
 	if u != nil {
 		return u.UnmarshalCTYValue(value)
+	}
+	if uj != nil {
+		bs, err := ctyValueToJSON(value)
+		if err != nil {
+			return &UnmarshalTypeError{CTYType: value.Type(), Type: rv.Type(), Detail: err}
+		}
+		return uj.UnmarshalJSON(bs)
 	}
 	if ut != nil {
 		return &UnmarshalTypeError{CTYType: value.Type(), Type: rv.Type()}
@@ -150,9 +164,16 @@ func unmarshalCTYPrimitive(value cty.Value, rv reflect.Value) error {
 	if !value.IsKnown() {
 		return &UnknownValueError{Value: value}
 	}
-	u, ut, pv := indirect(rv, value.IsNull())
+	u, uj, ut, pv := indirect(rv, value.IsNull())
 	if u != nil {
 		return u.UnmarshalCTYValue(value)
+	}
+	if uj != nil {
+		bs, err := ctyValueToJSON(value)
+		if err != nil {
+			return &UnmarshalTypeError{CTYType: value.Type(), Type: rv.Type(), Detail: err}
+		}
+		return uj.UnmarshalJSON(bs)
 	}
 	if ut != nil {
 		if value.Type() != cty.String {
@@ -304,9 +325,14 @@ func (e *InvalidUnmarshalError) Error() string {
 type UnmarshalTypeError struct {
 	CTYType cty.Type
 	Type    reflect.Type
+	Detail  error
 }
 
 // Error implements the error interface.
 func (e *UnmarshalTypeError) Error() string {
 	return "hclutl: cannot unmarshal " + e.CTYType.FriendlyName() + " into Go value of type " + e.Type.String()
+}
+
+func (e *UnmarshalTypeError) Unwrap() error {
+	return e.Detail
 }

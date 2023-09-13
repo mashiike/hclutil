@@ -1,6 +1,7 @@
 package hclutil_test
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/mashiike/hclutil"
@@ -564,6 +565,45 @@ func TestMarshalCTYValue__Marshaler(t *testing.T) {
 		if got.GoString() != want.GoString() {
 			t.Errorf("got = %s, want %s", got.GoString(), want.GoString())
 			t.FailNow()
+		}
+	})
+}
+
+func TestMarshalCTYValue__JSONMarshaler(t *testing.T) {
+	t.Parallel()
+	t.Run("struct", func(t *testing.T) {
+		v := json.RawMessage(`{"hoge":"fuga"}`)
+		got, err := hclutil.MarshalCTYValue(v)
+		if err != nil {
+			t.Error(err)
+			t.FailNow()
+		}
+		want := cty.ObjectVal(map[string]cty.Value{
+			"hoge": cty.StringVal("fuga"),
+		})
+		if got.GoString() != want.GoString() {
+			t.Errorf("got = %s, want %s", got.GoString(), want.GoString())
+			t.FailNow()
+		}
+		if !got.Type().IsObjectType() {
+			t.Errorf("got is not object type: %s", got.Type().GoString())
+			t.FailNow()
+		}
+		gotMap := got.AsValueMap()
+		wantMap := want.AsValueMap()
+		if len(gotMap) != len(wantMap) {
+			t.Errorf("got length = %d, want %d", len(gotMap), len(wantMap))
+			t.FailNow()
+		}
+		for k := range gotMap {
+			if gotMap[k].Type().GoString() != wantMap[k].Type().GoString() {
+				t.Errorf("got type = %v, want %v", gotMap[k].Type(), wantMap[k].Type())
+				t.FailNow()
+			}
+			if gotMap[k].GoString() != wantMap[k].GoString() {
+				t.Errorf("got = %s, want %s", gotMap[k], wantMap[k])
+				t.FailNow()
+			}
 		}
 	})
 }

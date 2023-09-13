@@ -1,8 +1,8 @@
 package hclutil
 
 import (
-	"github.com/hashicorp/hcl/v2"
-	"github.com/hashicorp/hcl/v2/hclsyntax"
+	"encoding/json"
+
 	"github.com/zclconf/go-cty/cty"
 )
 
@@ -10,19 +10,11 @@ import (
 //
 //	これは、ログ出力等を行うときのデバッグ用途を想定しています。
 func DumpCTYValue(v cty.Value) (string, error) {
-	expr, diags := hclsyntax.ParseExpression([]byte(`jsonencode(var)`), "", hcl.Pos{Line: 1, Column: 1})
-	if diags.HasErrors() {
-		return "", diags
+	var raw json.RawMessage
+	if err := UnmarshalCTYValue(v, &raw); err != nil {
+		return "", err
 	}
-	evalCtx := NewEvalContext()
-	evalCtx.Variables = map[string]cty.Value{
-		"var": v,
-	}
-	result, diags := expr.Value(evalCtx)
-	if diags.HasErrors() {
-		return "", diags
-	}
-	return result.AsString(), nil
+	return string(raw), nil
 }
 
 // MustDumpCtyValue は cty.Value をJSON文字列に変換します。
