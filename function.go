@@ -21,104 +21,101 @@ import (
 	"github.com/zclconf/go-cty/cty/function/stdlib"
 )
 
-type NewEvalContextOptions struct {
+type utilFunctionOptions struct {
 	fsyss []fs.FS
 }
 
 // WithFilePath は file関数やtemplatefile関数で参照するファイルのパスを追加します。
-func WithFilePath(path string) func(*NewEvalContextOptions) {
-	return func(opts *NewEvalContextOptions) {
+func WithFilePath(path string) func(*utilFunctionOptions) {
+	return func(opts *utilFunctionOptions) {
 		opts.fsyss = append(opts.fsyss, os.DirFS(path))
 	}
 }
 
 // Withfsys は file関数やtemplatefile関数で参照するファイルシステムを追加します。
-func WithFS(baseFS fs.FS) func(*NewEvalContextOptions) {
-	return func(opts *NewEvalContextOptions) {
+func WithFS(baseFS fs.FS) func(*utilFunctionOptions) {
+	return func(opts *utilFunctionOptions) {
 		opts.fsyss = append(opts.fsyss, baseFS)
 	}
 }
 
-// NewEvalContext は よく使う基本的な関数を登録したEvalContextを作成します。
-// NewEvalContext creates an EvalContext with basic functions.
-func NewEvalContext(optFns ...func(*NewEvalContextOptions)) *hcl.EvalContext {
-	opts := &NewEvalContextOptions{}
+// WithUtilFunctions は よく使う基本的な関数を登録したEvalContextを作成します。
+func WithUtilFunctions(ctx *hcl.EvalContext, optFns ...func(*utilFunctionOptions)) *hcl.EvalContext {
+	opts := &utilFunctionOptions{}
 	for _, optFn := range optFns {
 		optFn(opts)
 	}
-
-	evalCtx := &hcl.EvalContext{
-		Functions: map[string]function.Function{
-			"abs":              stdlib.AbsoluteFunc,
-			"add":              stdlib.AddFunc,
-			"can":              tryfunc.CanFunc,
-			"ceil":             stdlib.CeilFunc,
-			"chomp":            stdlib.ChompFunc,
-			"coalesce":         stdlib.CoalesceFunc,
-			"coalescelist":     stdlib.CoalesceListFunc,
-			"compact":          stdlib.CompactFunc,
-			"concat":           stdlib.ConcatFunc,
-			"contains":         stdlib.ContainsFunc,
-			"csvdecode":        stdlib.CSVDecodeFunc,
-			"duration":         DurationFunc,
-			"distinct":         stdlib.DistinctFunc,
-			"element":          stdlib.ElementFunc,
-			"env":              EnvFunc,
-			"chunklist":        stdlib.ChunklistFunc,
-			"flatten":          stdlib.FlattenFunc,
-			"floor":            stdlib.FloorFunc,
-			"format":           stdlib.FormatFunc,
-			"formatdate":       stdlib.FormatDateFunc,
-			"formatlist":       stdlib.FormatListFunc,
-			"indent":           stdlib.IndentFunc,
-			"index":            stdlib.IndexFunc,
-			"join":             stdlib.JoinFunc,
-			"jsondecode":       stdlib.JSONDecodeFunc,
-			"jsonencode":       stdlib.JSONEncodeFunc,
-			"keys":             stdlib.KeysFunc,
-			"log":              stdlib.LogFunc,
-			"lower":            stdlib.LowerFunc,
-			"max":              stdlib.MaxFunc,
-			"merge":            stdlib.MergeFunc,
-			"min":              stdlib.MinFunc,
-			"must_env":         MustEnvFunc,
-			"now":              NowFunc,
-			"parseint":         stdlib.ParseIntFunc,
-			"pow":              stdlib.PowFunc,
-			"range":            stdlib.RangeFunc,
-			"regex":            stdlib.RegexFunc,
-			"regexall":         stdlib.RegexAllFunc,
-			"reverse":          stdlib.ReverseListFunc,
-			"setintersection":  stdlib.SetIntersectionFunc,
-			"setproduct":       stdlib.SetProductFunc,
-			"setsubtract":      stdlib.SetSubtractFunc,
-			"setunion":         stdlib.SetUnionFunc,
-			"signum":           stdlib.SignumFunc,
-			"strftime":         StrftimeFunc,
-			"strftime_in_zone": StrftimeInZoneFunc,
-			"slice":            stdlib.SliceFunc,
-			"sort":             stdlib.SortFunc,
-			"split":            stdlib.SplitFunc,
-			"strrev":           stdlib.ReverseFunc,
-			"substr":           stdlib.SubstrFunc,
-			"timeadd":          stdlib.TimeAddFunc,
-			"title":            stdlib.TitleFunc,
-			"trim":             stdlib.TrimFunc,
-			"trimprefix":       stdlib.TrimPrefixFunc,
-			"trimspace":        stdlib.TrimSpaceFunc,
-			"trimsuffix":       stdlib.TrimSuffixFunc,
-			"try":              tryfunc.TryFunc,
-			"upper":            stdlib.UpperFunc,
-			"values":           stdlib.ValuesFunc,
-			"yamldecode":       ctyyaml.YAMLDecodeFunc,
-			"yamlencode":       ctyyaml.YAMLEncodeFunc,
-			"zipmap":           stdlib.ZipmapFunc,
-		},
+	f := map[string]function.Function{
+		"abs":              stdlib.AbsoluteFunc,
+		"add":              stdlib.AddFunc,
+		"can":              tryfunc.CanFunc,
+		"ceil":             stdlib.CeilFunc,
+		"chomp":            stdlib.ChompFunc,
+		"coalesce":         stdlib.CoalesceFunc,
+		"coalescelist":     stdlib.CoalesceListFunc,
+		"compact":          stdlib.CompactFunc,
+		"concat":           stdlib.ConcatFunc,
+		"contains":         stdlib.ContainsFunc,
+		"csvdecode":        stdlib.CSVDecodeFunc,
+		"duration":         DurationFunc,
+		"distinct":         stdlib.DistinctFunc,
+		"element":          stdlib.ElementFunc,
+		"env":              EnvFunc,
+		"chunklist":        stdlib.ChunklistFunc,
+		"flatten":          stdlib.FlattenFunc,
+		"floor":            stdlib.FloorFunc,
+		"format":           stdlib.FormatFunc,
+		"formatdate":       stdlib.FormatDateFunc,
+		"formatlist":       stdlib.FormatListFunc,
+		"indent":           stdlib.IndentFunc,
+		"index":            stdlib.IndexFunc,
+		"join":             stdlib.JoinFunc,
+		"jsondecode":       stdlib.JSONDecodeFunc,
+		"jsonencode":       stdlib.JSONEncodeFunc,
+		"keys":             stdlib.KeysFunc,
+		"log":              stdlib.LogFunc,
+		"lower":            stdlib.LowerFunc,
+		"max":              stdlib.MaxFunc,
+		"merge":            stdlib.MergeFunc,
+		"min":              stdlib.MinFunc,
+		"must_env":         MustEnvFunc,
+		"now":              NowFunc,
+		"parseint":         stdlib.ParseIntFunc,
+		"pow":              stdlib.PowFunc,
+		"range":            stdlib.RangeFunc,
+		"regex":            stdlib.RegexFunc,
+		"regexall":         stdlib.RegexAllFunc,
+		"reverse":          stdlib.ReverseListFunc,
+		"setintersection":  stdlib.SetIntersectionFunc,
+		"setproduct":       stdlib.SetProductFunc,
+		"setsubtract":      stdlib.SetSubtractFunc,
+		"setunion":         stdlib.SetUnionFunc,
+		"signum":           stdlib.SignumFunc,
+		"strftime":         StrftimeFunc,
+		"strftime_in_zone": StrftimeInZoneFunc,
+		"slice":            stdlib.SliceFunc,
+		"sort":             stdlib.SortFunc,
+		"split":            stdlib.SplitFunc,
+		"strrev":           stdlib.ReverseFunc,
+		"substr":           stdlib.SubstrFunc,
+		"timeadd":          stdlib.TimeAddFunc,
+		"title":            stdlib.TitleFunc,
+		"trim":             stdlib.TrimFunc,
+		"trimprefix":       stdlib.TrimPrefixFunc,
+		"trimspace":        stdlib.TrimSpaceFunc,
+		"trimsuffix":       stdlib.TrimSuffixFunc,
+		"try":              tryfunc.TryFunc,
+		"upper":            stdlib.UpperFunc,
+		"values":           stdlib.ValuesFunc,
+		"yamldecode":       ctyyaml.YAMLDecodeFunc,
+		"yamlencode":       ctyyaml.YAMLEncodeFunc,
+		"zipmap":           stdlib.ZipmapFunc,
 	}
-
-	evalCtx.Functions["file"] = MakeFileFunc(opts.fsyss...)
-	evalCtx.Functions["templatefile"] = MakeTemplateFileFunc(evalCtx, opts.fsyss...)
-	return evalCtx
+	f["file"] = MakeFileFunc(opts.fsyss...)
+	f["templatefile"] = MakeTemplateFileFunc(f, opts.fsyss...)
+	ret := ctx.NewChild()
+	ret.Functions = f
+	return ret
 }
 
 var MustEnvFunc = function.New(&function.Spec{
@@ -248,7 +245,7 @@ func MakeFileFunc(baseFSs ...fs.FS) function.Function {
 // ```
 // text = templatefile("path/to/file", {key = "value"})
 // ```
-func MakeTemplateFileFunc(ctx *hcl.EvalContext, baseFSs ...fs.FS) function.Function {
+func MakeTemplateFileFunc(functions map[string]function.Function, baseFSs ...fs.FS) function.Function {
 	render := func(args []cty.Value) (cty.Value, error) {
 		if len(args) != 2 {
 			return cty.UnknownVal(cty.DynamicPseudoType), errors.New("require argument length 2")
@@ -267,8 +264,10 @@ func MakeTemplateFileFunc(ctx *hcl.EvalContext, baseFSs ...fs.FS) function.Funct
 		if diags.HasErrors() {
 			return cty.UnknownVal(cty.DynamicPseudoType), diags
 		}
-		ctx = ctx.NewChild()
-		ctx.Variables = args[1].AsValueMap()
+		ctx := &hcl.EvalContext{
+			Variables: args[1].AsValueMap(),
+			Functions: functions,
+		}
 		value, diags := expr.Value(ctx)
 		if diags.HasErrors() {
 			return cty.UnknownVal(cty.DynamicPseudoType), diags
