@@ -4,7 +4,11 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/hashicorp/hcl/v2"
+	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/zclconf/go-cty/cty"
+	"github.com/zclconf/go-cty/cty/function"
+	"github.com/zclconf/go-cty/cty/function/stdlib"
 )
 
 // UnmarshalCTYValue decodes a cty.Value into the value pointed to by v.
@@ -47,9 +51,16 @@ func unmarshalCTYValue(value cty.Value, rv reflect.Value) error {
 }
 
 func unmarshalCTYList(value cty.Value, rv reflect.Value) error {
-	u, ut, pv := indirect(rv, value.IsNull())
+	u, uj, ut, pv := indirect(rv, value.IsNull())
 	if u != nil {
 		return u.UnmarshalCTYValue(value)
+	}
+	if uj != nil {
+		bs, err := ctyValueToJSON(value)
+		if err != nil {
+			return &UnmarshalTypeError{CTYType: value.Type(), Type: rv.Type(), Detail: err}
+		}
+		return uj.UnmarshalJSON(bs)
 	}
 	if ut != nil {
 		return &UnmarshalTypeError{CTYType: value.Type(), Type: rv.Type()}
@@ -87,9 +98,16 @@ func unmarshalCTYList(value cty.Value, rv reflect.Value) error {
 }
 
 func unmarshalCTYObject(value cty.Value, rv reflect.Value) error {
-	u, ut, pv := indirect(rv, value.IsNull())
+	u, uj, ut, pv := indirect(rv, value.IsNull())
 	if u != nil {
 		return u.UnmarshalCTYValue(value)
+	}
+	if uj != nil {
+		bs, err := ctyValueToJSON(value)
+		if err != nil {
+			return &UnmarshalTypeError{CTYType: value.Type(), Type: rv.Type(), Detail: err}
+		}
+		return uj.UnmarshalJSON(bs)
 	}
 	if ut != nil {
 		return &UnmarshalTypeError{CTYType: value.Type(), Type: rv.Type()}
@@ -150,9 +168,16 @@ func unmarshalCTYPrimitive(value cty.Value, rv reflect.Value) error {
 	if !value.IsKnown() {
 		return &UnknownValueError{Value: value}
 	}
-	u, ut, pv := indirect(rv, value.IsNull())
+	u, uj, ut, pv := indirect(rv, value.IsNull())
 	if u != nil {
 		return u.UnmarshalCTYValue(value)
+	}
+	if uj != nil {
+		bs, err := ctyValueToJSON(value)
+		if err != nil {
+			return &UnmarshalTypeError{CTYType: value.Type(), Type: rv.Type(), Detail: err}
+		}
+		return uj.UnmarshalJSON(bs)
 	}
 	if ut != nil {
 		if value.Type() != cty.String {
@@ -304,9 +329,45 @@ func (e *InvalidUnmarshalError) Error() string {
 type UnmarshalTypeError struct {
 	CTYType cty.Type
 	Type    reflect.Type
+	Detail  error
 }
 
 // Error implements the error interface.
 func (e *UnmarshalTypeError) Error() string {
 	return "hclutl: cannot unmarshal " + e.CTYType.FriendlyName() + " into Go value of type " + e.Type.String()
+}
+
+func (e *UnmarshalTypeError) Unwrap() error {
+	return e.Detail
+}
+
+var (
+	exprStr = `jsonencode(var)`
+	expr    hcl.Expression
+)
+
+func init() {
+	var diags hcl.Diagnostics
+	expr, diags = hclsyntax.ParseExpression([]byte(exprStr), "cty_value_to_json.hcl", hcl.Pos{Line: 1, Column: 1})
+	if diags.HasErrors() {
+		panic(fmt.Sprintf("hclutil: failed to parse expression %s: %s", exprStr, diags.Error()))
+	}
+}
+
+func ctyValueToJSON(value cty.Value) ([]byte, error) {
+	if !value.IsKnown() {
+		return nil, &UnknownValueError{Value: value}
+	}
+	v, diags := expr.Value(&hcl.EvalContext{
+		Variables: map[string]cty.Value{
+			"var": value,
+		},
+		Functions: map[string]function.Function{
+			"jsonencode": stdlib.JSONEncodeFunc,
+		},
+	})
+	if diags.HasErrors() {
+		return nil, fmt.Errorf("convert cty.Value to JSON: %w", diags)
+	}
+	return []byte(v.AsString()), nil
 }

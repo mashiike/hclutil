@@ -1,6 +1,7 @@
 package hclutil_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"testing"
@@ -403,6 +404,26 @@ func TestUnmarshalCTYValue__CTYValueUnmarshaler(t *testing.T) {
 		}
 		if v.Foo.Val != "bar" {
 			t.Errorf("v.Foo.Val = %s, want bar", v.Foo.Val)
+		}
+	})
+}
+
+func TestUnmarshalCTYValue__JSONUnmarshaler(t *testing.T) {
+	t.Parallel()
+	t.Run("json.RawMessage", func(t *testing.T) {
+		t.Parallel()
+		var v json.RawMessage
+		err := hclutil.UnmarshalCTYValue(
+			cty.ObjectVal(map[string]cty.Value{
+				"foo": cty.StringVal("bar"),
+			}),
+			&v,
+		)
+		if err != nil {
+			t.Error(err)
+		}
+		if string(v) != `{"foo":"bar"}` {
+			t.Errorf("v = %s, want {\"foo\":\"bar\"}", v)
 		}
 	})
 }
