@@ -1,5 +1,8 @@
 # Changelog
 
+## [v0.4.0](https://github.com/mashiike/hclutil/compare/v0.3.0...v0.4.0) - 2023-09-15
+- util for restriction block by @mashiike in https://github.com/mashiike/hclutil/pull/14
+
 ## [v0.3.0](https://github.com/mashiike/hclutil/compare/v0.2.0...v0.3.0) - 2023-09-13
 - MergeVariables utils by @mashiike in https://github.com/mashiike/hclutil/pull/12
 
