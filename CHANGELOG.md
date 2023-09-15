@@ -1,5 +1,8 @@
 # Changelog
 
+## [v0.5.0](https://github.com/mashiike/hclutil/compare/v0.4.0...v0.5.0) - 2023-09-15
+- append variablesReffarances by @mashiike in https://github.com/mashiike/hclutil/pull/16
+
 ## [v0.4.0](https://github.com/mashiike/hclutil/compare/v0.3.0...v0.4.0) - 2023-09-15
 - util for restriction block by @mashiike in https://github.com/mashiike/hclutil/pull/14
 
