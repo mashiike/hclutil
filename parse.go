@@ -11,6 +11,7 @@ import (
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclparse"
+	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"golang.org/x/term"
 )
 
@@ -234,4 +235,9 @@ func parseFS(path string, parser *hclparse.Parser, fsys fs.FS) (hcl.Body, *Diagn
 		}
 	}
 	return hcl.MergeFiles(files), newDiagnosticsWriter(parser.Files()), diags
+}
+
+// ParseExpression は HCLの式をパースします。
+func ParseExpression(expr []byte) (hcl.Expression, hcl.Diagnostics) {
+	return hclsyntax.ParseExpression(expr, "temporary.hcl", hcl.Pos{Line: 1, Column: 1})
 }
