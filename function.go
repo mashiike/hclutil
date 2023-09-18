@@ -168,6 +168,7 @@ var EnvFunc = function.New(&function.Spec{
 })
 
 func openFile(path string, baseFSs ...fs.FS) ([]byte, error) {
+	path = filepath.Clean(path)
 	for _, baseFS := range baseFSs {
 		if _, err := fs.Stat(baseFS, path); err != nil {
 			continue
