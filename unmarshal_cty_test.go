@@ -23,6 +23,17 @@ func TestUnmarshalCTYValue__PrimitiveType(t *testing.T) {
 			t.Errorf("v = %s, want hoge", v)
 		}
 	})
+	t.Run("nil to empty string", func(t *testing.T) {
+		t.Parallel()
+		var v string
+		err := hclutil.UnmarshalCTYValue(cty.NilVal, &v)
+		if err != nil {
+			t.Error(err)
+		}
+		if v != "" {
+			t.Errorf("v = %s, want \"\"", v)
+		}
+	})
 	t.Run("integer", func(t *testing.T) {
 		t.Parallel()
 		var v int
@@ -32,6 +43,17 @@ func TestUnmarshalCTYValue__PrimitiveType(t *testing.T) {
 		}
 		if v != 1234 {
 			t.Errorf("v = %d, want 1234", v)
+		}
+	})
+	t.Run("nil to zero integer", func(t *testing.T) {
+		t.Parallel()
+		var v int
+		err := hclutil.UnmarshalCTYValue(cty.NilVal, &v)
+		if err != nil {
+			t.Error(err)
+		}
+		if v != 0 {
+			t.Errorf("v = %d, want 0", v)
 		}
 	})
 	t.Run("float", func(t *testing.T) {
@@ -45,6 +67,17 @@ func TestUnmarshalCTYValue__PrimitiveType(t *testing.T) {
 			t.Errorf("v = %f, want 1234.5678", v)
 		}
 	})
+	t.Run("nil to zero float", func(t *testing.T) {
+		t.Parallel()
+		var v float64
+		err := hclutil.UnmarshalCTYValue(cty.NilVal, &v)
+		if err != nil {
+			t.Error(err)
+		}
+		if v != 0 {
+			t.Errorf("v = %f, want 0", v)
+		}
+	})
 	t.Run("bool", func(t *testing.T) {
 		t.Parallel()
 		var v bool
@@ -54,6 +87,17 @@ func TestUnmarshalCTYValue__PrimitiveType(t *testing.T) {
 		}
 		if !v {
 			t.Errorf("v = %t, want true", v)
+		}
+	})
+	t.Run("nil to false bool", func(t *testing.T) {
+		t.Parallel()
+		var v bool
+		err := hclutil.UnmarshalCTYValue(cty.NilVal, &v)
+		if err != nil {
+			t.Error(err)
+		}
+		if v {
+			t.Errorf("v = %t, want false", v)
 		}
 	})
 }
@@ -73,6 +117,17 @@ func TestUnmarshalCTYValue__PtrPrimitive(t *testing.T) {
 			if *v != "hoge" {
 				t.Errorf("*v = %s, want hoge", *v)
 			}
+		}
+	})
+	t.Run("nil to *string", func(t *testing.T) {
+		t.Parallel()
+		var v *string
+		err := hclutil.UnmarshalCTYValue(cty.NilVal, &v)
+		if err != nil {
+			t.Error(err)
+		}
+		if v != nil {
+			t.Error("v is not nil")
 		}
 	})
 	t.Run("integer", func(t *testing.T) {
@@ -313,12 +368,14 @@ func TestUnmarshalCTYValue__Struct(t *testing.T) {
 			Foo    string
 			Bar    int
 			FooBar bool
+			Zero   int
 		}
 		err := hclutil.UnmarshalCTYValue(
 			cty.ObjectVal(map[string]cty.Value{
 				"foo":     cty.StringVal("bar"),
 				"bar":     cty.NumberIntVal(1234),
 				"foo_bar": cty.BoolVal(true),
+				"zero":    cty.NilVal,
 			}),
 			&v,
 		)
@@ -338,7 +395,7 @@ func TestUnmarshalCTYValue__Struct(t *testing.T) {
 	t.Run("tag struct", func(t *testing.T) {
 		t.Parallel()
 		type embedded struct {
-			Embeded string `cty:"embeded"`
+			Embedded string `cty:"embedded"`
 		}
 		var v struct {
 			embedded
@@ -350,10 +407,10 @@ func TestUnmarshalCTYValue__Struct(t *testing.T) {
 		}
 		err := hclutil.UnmarshalCTYValue(
 			cty.ObjectVal(map[string]cty.Value{
-				"foo":     cty.StringVal("bar"),
-				"bar":     cty.NumberIntVal(1234),
-				"baza":    cty.BoolVal(true),
-				"embeded": cty.StringVal("embeded"),
+				"foo":      cty.StringVal("bar"),
+				"bar":      cty.NumberIntVal(1234),
+				"baza":     cty.BoolVal(true),
+				"embedded": cty.StringVal("embedded"),
 			}),
 			&v,
 		)
@@ -375,8 +432,21 @@ func TestUnmarshalCTYValue__Struct(t *testing.T) {
 		if v.unexported != "" {
 			t.Errorf("v.unexported = %s, want \"\"", v.unexported)
 		}
-		if v.Embeded != "embeded" {
-			t.Errorf("v.Embeded = %s, want embeded", v.Embeded)
+		if v.Embedded != "embedded" {
+			t.Errorf("v.Embedded = %s, want embedded", v.Embedded)
+		}
+	})
+	t.Run("nil to struct", func(t *testing.T) {
+		t.Parallel()
+		var v struct {
+			Foo string
+		}
+		err := hclutil.UnmarshalCTYValue(cty.NilVal, &v)
+		if err != nil {
+			t.Error(err)
+		}
+		if v.Foo != "" {
+			t.Errorf("v.Foo = %s, want \"\"", v.Foo)
 		}
 	})
 }
