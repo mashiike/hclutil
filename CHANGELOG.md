@@ -1,5 +1,9 @@
 # Changelog
 
+## [v0.5.2](https://github.com/mashiike/hclutil/compare/v0.5.1...v0.5.2) - 2023-09-18
+- fix nilVal unmarshal, panic... set zero value by @mashiike in https://github.com/mashiike/hclutil/pull/20
+- if duty-path, can not fetch file. by @mashiike in https://github.com/mashiike/hclutil/pull/22
+
 ## [v0.5.1](https://github.com/mashiike/hclutil/compare/v0.5.0...v0.5.1) - 2023-09-18
 - fix tuple marshal by @mashiike in https://github.com/mashiike/hclutil/pull/18
 
