@@ -695,3 +695,51 @@ func TestMarshalCTYValue__TextMarshaler(t *testing.T) {
 		}
 	})
 }
+
+func TestMarshalCTYValue__TupleList(t *testing.T) {
+	t.Parallel()
+	t.Run("[]interfac{}", func(t *testing.T) {
+		v := []interface{}{1234, "hoge", true}
+		got, err := hclutil.MarshalCTYValue(v)
+		if err != nil {
+			t.Error(err)
+			t.FailNow()
+		}
+		want := cty.TupleVal([]cty.Value{
+			cty.NumberIntVal(1234),
+			cty.StringVal("hoge"),
+			cty.True,
+		})
+		if got.GoString() != want.GoString() {
+			t.Errorf("got = %s, want %s", got.GoString(), want.GoString())
+			t.FailNow()
+		}
+	})
+	t.Run("[][]interface{}", func(t *testing.T) {
+		v := [][]interface{}{
+			{1234, "hoge", true},
+			{5678, "fuga", false},
+		}
+		got, err := hclutil.MarshalCTYValue(v)
+		if err != nil {
+			t.Error(err)
+			t.FailNow()
+		}
+		want := cty.TupleVal([]cty.Value{
+			cty.TupleVal([]cty.Value{
+				cty.NumberIntVal(1234),
+				cty.StringVal("hoge"),
+				cty.True,
+			}),
+			cty.TupleVal([]cty.Value{
+				cty.NumberIntVal(5678),
+				cty.StringVal("fuga"),
+				cty.False,
+			}),
+		})
+		if got.GoString() != want.GoString() {
+			t.Errorf("got = %s, want %s", got.GoString(), want.GoString())
+			t.FailNow()
+		}
+	})
+}

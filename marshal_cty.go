@@ -207,7 +207,14 @@ func marshalCTYValueFromSlice(rv reflect.Value) (cty.Value, bool, error) {
 			return cty.UnknownVal(cty.DynamicPseudoType), true, err
 		}
 		valueList[i] = v
-		if !isTuple && elemType == cty.DynamicPseudoType {
+		if isTuple {
+			continue
+		}
+		if !v.Type().IsPrimitiveType() {
+			isTuple = true
+			continue
+		}
+		if elemType == cty.DynamicPseudoType {
 			elemType = v.Type()
 		} else {
 			if elemType != v.Type() {
