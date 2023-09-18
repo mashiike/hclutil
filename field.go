@@ -56,10 +56,10 @@ func newStructFields(rt reflect.Type) structFields {
 			omitEmpty = strings.Contains(hclTag, ",omitempty")
 		}
 		if f.Anonymous && ft.Kind() == reflect.Struct {
-			embededFields := getStructFileds(ft)
-			for _, embededField := range embededFields {
-				embededField.index = append(f.Index, embededField.index...)
-				fields = append(fields, embededField)
+			embeddedFields := getStructFileds(ft)
+			for _, embeddedField := range embeddedFields {
+				embeddedField.index = append(f.Index, embeddedField.index...)
+				fields = append(fields, embeddedField)
 			}
 			continue
 		}

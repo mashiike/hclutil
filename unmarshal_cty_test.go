@@ -395,7 +395,7 @@ func TestUnmarshalCTYValue__Struct(t *testing.T) {
 	t.Run("tag struct", func(t *testing.T) {
 		t.Parallel()
 		type embedded struct {
-			Embeded string `cty:"embeded"`
+			Embedded string `cty:"embedded"`
 		}
 		var v struct {
 			embedded
@@ -407,10 +407,10 @@ func TestUnmarshalCTYValue__Struct(t *testing.T) {
 		}
 		err := hclutil.UnmarshalCTYValue(
 			cty.ObjectVal(map[string]cty.Value{
-				"foo":     cty.StringVal("bar"),
-				"bar":     cty.NumberIntVal(1234),
-				"baza":    cty.BoolVal(true),
-				"embeded": cty.StringVal("embeded"),
+				"foo":      cty.StringVal("bar"),
+				"bar":      cty.NumberIntVal(1234),
+				"baza":     cty.BoolVal(true),
+				"embedded": cty.StringVal("embedded"),
 			}),
 			&v,
 		)
@@ -432,8 +432,8 @@ func TestUnmarshalCTYValue__Struct(t *testing.T) {
 		if v.unexported != "" {
 			t.Errorf("v.unexported = %s, want \"\"", v.unexported)
 		}
-		if v.Embeded != "embeded" {
-			t.Errorf("v.Embeded = %s, want embeded", v.Embeded)
+		if v.Embedded != "embedded" {
+			t.Errorf("v.Embedded = %s, want embedded", v.Embedded)
 		}
 	})
 	t.Run("nil to struct", func(t *testing.T) {
