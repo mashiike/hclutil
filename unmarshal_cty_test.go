@@ -262,6 +262,47 @@ func TestUnmarshalCTYValue__Interface(t *testing.T) {
 			t.Errorf("v[1] = %s, want bar", v[1])
 		}
 	})
+	t.Run("[][]interface{}", func(t *testing.T) {
+		t.Parallel()
+		var v [][]interface{}
+		err := hclutil.UnmarshalCTYValue(
+			cty.TupleVal([]cty.Value{
+				cty.TupleVal([]cty.Value{
+					cty.StringVal("foo"),
+					cty.NumberIntVal(1234),
+				}),
+				cty.TupleVal([]cty.Value{
+					cty.StringVal("baz"),
+					cty.NumberIntVal(5678),
+				}),
+			}),
+			&v,
+		)
+		if err != nil {
+			t.Error(err)
+		}
+		if len(v) != 2 {
+			t.Errorf("len(v) = %d, want 2", len(v))
+		}
+		if len(v[0]) != 2 {
+			t.Errorf("len(v[0]) = %d, want 2", len(v[0]))
+		}
+		if v[0][0] != "foo" {
+			t.Errorf("v[0][0] = %s, want foo", v[0][0])
+		}
+		if f, ok := v[0][1].(*big.Float); ok && f.String() != big.NewInt(1234).String() {
+			t.Errorf("v[0][1] = %v, want 1234", v[0][1])
+		}
+		if len(v[1]) != 2 {
+			t.Errorf("len(v[1]) = %d, want 2", len(v[1]))
+		}
+		if v[1][0] != "baz" {
+			t.Errorf("v[1][0] = %s, want baz", v[1][0])
+		}
+		if f, ok := v[1][1].(*big.Float); ok && f.String() != big.NewInt(5678).String() {
+			t.Errorf("v[1][1] = %v, want 5678", v[1][1])
+		}
+	})
 }
 
 func TestUnmarshalCTYValue__Struct(t *testing.T) {
