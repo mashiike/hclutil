@@ -16,37 +16,44 @@ func UnmarshalCTYValue(value cty.Value, v any) error {
 	if rv.Kind() != reflect.Ptr || rv.IsNil() {
 		return &InvalidUnmarshalError{Type: reflect.TypeOf(v)}
 	}
-	return unmarshalCTYValue(value, rv)
+	return unmarshalCTYValue("", value, rv)
 }
 
-func unmarshalCTYValue(value cty.Value, rv reflect.Value) error {
+func unmarshalCTYValue(path string, value cty.Value, rv reflect.Value) error {
 	t := value.Type()
 	switch {
 	case t.IsListType() || t.IsTupleType() || t.IsSetType():
 		if rv.IsValid() {
-			if err := unmarshalCTYList(value, rv); err != nil {
+			if err := unmarshalCTYList(path, value, rv); err != nil {
 				return err
 			}
 		}
 	case t.IsMapType() || t.IsObjectType():
 		if rv.IsValid() {
-			if err := unmarshalCTYObject(value, rv); err != nil {
+			if err := unmarshalCTYObject(path, value, rv); err != nil {
 				return err
 			}
 		}
 	case t.IsPrimitiveType():
 		if rv.IsValid() {
-			if err := unmarshalCTYPrimitive(value, rv); err != nil {
+			if err := unmarshalCTYPrimitive(path, value, rv); err != nil {
 				return err
 			}
 		}
+	case t == cty.NilType:
+		if rv.IsValid() {
+			if err := unmarshalCTYNil(path, value, rv); err != nil {
+				return err
+			}
+		}
+		return nil
 	default:
-		return &UnmarshalTypeError{CTYType: t, Type: rv.Type()}
+		return &UnmarshalTypeError{CTYType: t, Type: rv.Type(), Path: path}
 	}
 	return nil
 }
 
-func unmarshalCTYList(value cty.Value, rv reflect.Value) error {
+func unmarshalCTYList(path string, value cty.Value, rv reflect.Value) error {
 	u, uj, ut, pv := indirect(rv, value.IsNull())
 	if u != nil {
 		return u.UnmarshalCTYValue(value)
@@ -83,17 +90,17 @@ func unmarshalCTYList(value cty.Value, rv reflect.Value) error {
 			}
 		}
 		for i, v := range valueSlice {
-			if err := unmarshalCTYValue(v, pv.Index(i)); err != nil {
+			if err := unmarshalCTYValue(fmt.Sprintf("%s[%d]", path, i), v, pv.Index(i)); err != nil {
 				return err
 			}
 		}
 	default:
-		return &UnmarshalTypeError{CTYType: value.Type(), Type: pv.Type()}
+		return &UnmarshalTypeError{CTYType: value.Type(), Type: pv.Type(), Path: path}
 	}
 	return nil
 }
 
-func unmarshalCTYObject(value cty.Value, rv reflect.Value) error {
+func unmarshalCTYObject(path string, value cty.Value, rv reflect.Value) error {
 	u, uj, ut, pv := indirect(rv, value.IsNull())
 	if u != nil {
 		return u.UnmarshalCTYValue(value)
@@ -101,12 +108,12 @@ func unmarshalCTYObject(value cty.Value, rv reflect.Value) error {
 	if uj != nil {
 		bs, err := ctyValueToJSON(value)
 		if err != nil {
-			return &UnmarshalTypeError{CTYType: value.Type(), Type: rv.Type(), Detail: err}
+			return &UnmarshalTypeError{CTYType: value.Type(), Type: rv.Type(), Detail: err, Path: path}
 		}
 		return uj.UnmarshalJSON(bs)
 	}
 	if ut != nil {
-		return &UnmarshalTypeError{CTYType: value.Type(), Type: rv.Type()}
+		return &UnmarshalTypeError{CTYType: value.Type(), Type: rv.Type(), Path: path}
 	}
 	rv = pv
 	rt := rv.Type()
@@ -132,7 +139,7 @@ func unmarshalCTYObject(value cty.Value, rv reflect.Value) error {
 		valueMap := value.AsValueMap()
 		for k, v := range valueMap {
 			elemRv := reflect.New(rt.Elem())
-			if err := unmarshalCTYValue(v, elemRv.Elem()); err != nil {
+			if err := unmarshalCTYValue(fmt.Sprintf("%s[%s]", path, k), v, elemRv.Elem()); err != nil {
 				return err
 			}
 			rv.SetMapIndex(reflect.ValueOf(k), elemRv.Elem())
@@ -151,7 +158,7 @@ func unmarshalCTYObject(value cty.Value, rv reflect.Value) error {
 			for _, i := range field.index {
 				fv = fv.Field(i)
 			}
-			if err := unmarshalCTYValue(v, fv); err != nil {
+			if err := unmarshalCTYValue(fmt.Sprintf("%s.%s", path, field.tagName), v, fv); err != nil {
 				return err
 			}
 		}
@@ -160,7 +167,7 @@ func unmarshalCTYObject(value cty.Value, rv reflect.Value) error {
 	return &UnmarshalTypeError{CTYType: value.Type(), Type: rt}
 }
 
-func unmarshalCTYPrimitive(value cty.Value, rv reflect.Value) error {
+func unmarshalCTYPrimitive(path string, value cty.Value, rv reflect.Value) error {
 	if !value.IsKnown() {
 		return &UnknownValueError{Value: value}
 	}
@@ -223,7 +230,42 @@ func unmarshalCTYPrimitive(value cty.Value, rv reflect.Value) error {
 			return nil
 		}
 	default:
-		return &UnmarshalTypeError{CTYType: value.Type(), Type: pv.Type()}
+		return &UnmarshalTypeError{CTYType: value.Type(), Type: pv.Type(), Path: path}
+	}
+	return nil
+}
+
+func unmarshalCTYNil(path string, value cty.Value, rv reflect.Value) error {
+	u, uj, ut, pv := indirect(rv, true)
+	if u != nil {
+		return u.UnmarshalCTYValue(value)
+	}
+	if uj != nil {
+		return uj.UnmarshalJSON([]byte("null"))
+	}
+	if ut != nil {
+		return ut.UnmarshalText([]byte(""))
+	}
+	switch pv.Kind() {
+	case reflect.Bool:
+		pv.SetBool(false)
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		pv.SetInt(0)
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		pv.SetUint(0)
+	case reflect.Float32, reflect.Float64:
+		pv.SetFloat(0)
+	case reflect.String:
+		pv.SetString("")
+	case reflect.Interface:
+		if pv.NumMethod() == 0 {
+			pv.Set(reflect.ValueOf(nil))
+			return nil
+		}
+	case reflect.Map, reflect.Slice, reflect.Array, reflect.Ptr, reflect.Struct:
+		pv.Set(reflect.Zero(pv.Type()))
+	default:
+		return &UnmarshalTypeError{CTYType: value.Type(), Type: pv.Type(), Path: path}
 	}
 	return nil
 }
@@ -244,8 +286,10 @@ func convertCTYValue(value cty.Value) (any, error) {
 		return convertCTYObject(value)
 	case t.IsPrimitiveType():
 		return convertCTYPrimitive(value)
+	case t == cty.NilType:
+		return cty.NilVal, nil
 	default:
-		return nil, fmt.Errorf("hclutil: cannot convert %s to Go value", t.FriendlyName())
+		return nil, fmt.Errorf("hclutil: cannot convert %s to Go value", t.GoString())
 	}
 }
 
@@ -286,8 +330,10 @@ func convertCTYPrimitive(value cty.Value) (any, error) {
 		return value.AsBigFloat(), nil
 	case cty.String:
 		return value.AsString(), nil
+	case cty.NilType:
+		return cty.NilVal, nil
 	default:
-		return nil, fmt.Errorf("hclutil: cannot convert %s to Go value", value.Type().FriendlyName())
+		return nil, fmt.Errorf("hclutil: cannot convert %s to Go value", value.Type().GoString())
 	}
 }
 
@@ -325,12 +371,13 @@ func (e *InvalidUnmarshalError) Error() string {
 type UnmarshalTypeError struct {
 	CTYType cty.Type
 	Type    reflect.Type
+	Path    string
 	Detail  error
 }
 
 // Error implements the error interface.
 func (e *UnmarshalTypeError) Error() string {
-	return "hclutl: cannot unmarshal " + e.CTYType.FriendlyName() + " into Go value of type " + e.Type.String()
+	return "hclutl: cannot unmarshal " + e.CTYType.GoString() + " into Go value of type " + e.Type.String() + " [" + e.Path + "]"
 }
 
 func (e *UnmarshalTypeError) Unwrap() error {
