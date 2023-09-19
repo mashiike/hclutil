@@ -34,6 +34,28 @@ func TestUnmarshalCTYValue__PrimitiveType(t *testing.T) {
 			t.Errorf("v = %s, want \"\"", v)
 		}
 	})
+	t.Run("empty list to []string", func(t *testing.T) {
+		t.Parallel()
+		var v []string
+		err := hclutil.UnmarshalCTYValue(cty.ListValEmpty(cty.String), &v)
+		if err != nil {
+			t.Error(err)
+		}
+		if len(v) != 0 {
+			t.Errorf("len(v) = %d, want 0", len(v))
+		}
+	})
+	t.Run("empty tuple to []string", func(t *testing.T) {
+		t.Parallel()
+		var v []string
+		err := hclutil.UnmarshalCTYValue(cty.EmptyTupleVal, &v)
+		if err != nil {
+			t.Error(err)
+		}
+		if len(v) != 0 {
+			t.Errorf("len(v) = %d, want 0", len(v))
+		}
+	})
 	t.Run("integer", func(t *testing.T) {
 		t.Parallel()
 		var v int
@@ -315,6 +337,28 @@ func TestUnmarshalCTYValue__Interface(t *testing.T) {
 		}
 		if v[1] != "bar" {
 			t.Errorf("v[1] = %s, want bar", v[1])
+		}
+	})
+	t.Run("empty tuple to []interface{}", func(t *testing.T) {
+		t.Parallel()
+		var v []interface{}
+		err := hclutil.UnmarshalCTYValue(cty.EmptyTupleVal, &v)
+		if err != nil {
+			t.Error(err)
+		}
+		if len(v) != 0 {
+			t.Errorf("len(v) = %d, want 0", len(v))
+		}
+	})
+	t.Run("empty list to []interface{}", func(t *testing.T) {
+		t.Parallel()
+		var v []interface{}
+		err := hclutil.UnmarshalCTYValue(cty.ListValEmpty(cty.String), &v)
+		if err != nil {
+			t.Error(err)
+		}
+		if len(v) != 0 {
+			t.Errorf("len(v) = %d, want 0", len(v))
 		}
 	})
 	t.Run("[][]interface{}", func(t *testing.T) {
