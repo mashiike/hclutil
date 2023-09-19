@@ -330,7 +330,7 @@ func Strftime(layout string, loc *time.Location, t time.Time) (string, error) {
 
 func nowUnixSeconds() float64 {
 	now := flextime.Now()
-	return float64(now.UnixNano()) / float64(time.Second)
+	return float64(now.Unix())
 }
 func unixSecondsToTime(unixSeconds float64) time.Time {
 	return time.Unix(0, int64(unixSeconds*float64(time.Second)))

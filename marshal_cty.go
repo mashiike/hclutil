@@ -91,12 +91,21 @@ func marshalCTYValue(rv reflect.Value) (cty.Value, bool, error) {
 	switch rv.Kind() {
 	case reflect.Interface:
 		if rv.IsNil() {
-			return cty.NilVal, true, nil
+			return cty.NullVal(cty.DynamicPseudoType), true, nil
 		}
 		return marshalCTYValue(rv.Elem())
 	case reflect.Ptr:
 		if rv.IsNil() {
-			return cty.NilVal, true, nil
+			switch rv.Type().Elem().Kind() {
+			case reflect.String:
+				return cty.NullVal(cty.String), true, nil
+			case reflect.Bool:
+				return cty.NullVal(cty.Bool), true, nil
+			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Float32, reflect.Float64:
+				return cty.NullVal(cty.Number), true, nil
+			default:
+				return cty.NullVal(cty.DynamicPseudoType), true, nil
+			}
 		}
 		return marshalCTYValue(rv.Elem())
 	case reflect.Struct:

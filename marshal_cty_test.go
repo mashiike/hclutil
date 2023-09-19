@@ -36,6 +36,18 @@ func TestMarshalCTYValue__Primitive(t *testing.T) {
 			t.Errorf("got = %s, want %s", got, want)
 		}
 	})
+	t.Run("*integer", func(t *testing.T) {
+		t.Parallel()
+		var v *int
+		got, err := hclutil.MarshalCTYValue(v)
+		if err != nil {
+			t.Error(err)
+		}
+		want := cty.NullVal(cty.Number)
+		if got.GoString() != want.GoString() {
+			t.Errorf("got type = %s, want %s", got.Type(), want.Type())
+		}
+	})
 	t.Run("float", func(t *testing.T) {
 		t.Parallel()
 		v := 1234.5678
