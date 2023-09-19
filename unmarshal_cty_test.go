@@ -23,6 +23,32 @@ func TestUnmarshalCTYValue__PrimitiveType(t *testing.T) {
 			t.Errorf("v = %s, want hoge", v)
 		}
 	})
+	t.Run("cty.String to *string", func(t *testing.T) {
+		t.Parallel()
+		var v *string
+		err := hclutil.UnmarshalCTYValue(cty.StringVal("hoge"), &v)
+		if err != nil {
+			t.Error(err)
+		}
+		if v == nil {
+			t.Error("v is nil")
+		} else {
+			if *v != "hoge" {
+				t.Errorf("*v = %s, want hoge", *v)
+			}
+		}
+	})
+	t.Run("cty.NullVal(cty.String) to *string", func(t *testing.T) {
+		t.Parallel()
+		var v *string
+		err := hclutil.UnmarshalCTYValue(cty.NullVal(cty.String), &v)
+		if err != nil {
+			t.Error(err)
+		}
+		if v != nil {
+			t.Error("v is not nil")
+		}
+	})
 	t.Run("nil to empty string", func(t *testing.T) {
 		t.Parallel()
 		var v string

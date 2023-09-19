@@ -191,6 +191,13 @@ func unmarshalCTYPrimitive(path string, value cty.Value, rv reflect.Value) error
 		}
 		return ut.UnmarshalText([]byte(value.AsString()))
 	}
+	if pv.Kind() == reflect.Pointer {
+		if value.IsNull() {
+			pv.Set(reflect.Zero(pv.Type()))
+			return nil
+		}
+		return unmarshalCTYPrimitive(path, value, pv.Elem())
+	}
 	switch pv.Kind() {
 	case reflect.Bool:
 		if value.Type() != cty.Bool {
