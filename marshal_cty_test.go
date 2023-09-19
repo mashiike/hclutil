@@ -36,6 +36,18 @@ func TestMarshalCTYValue__Primitive(t *testing.T) {
 			t.Errorf("got = %s, want %s", got, want)
 		}
 	})
+	t.Run("*integer", func(t *testing.T) {
+		t.Parallel()
+		var v *int
+		got, err := hclutil.MarshalCTYValue(v)
+		if err != nil {
+			t.Error(err)
+		}
+		want := cty.NullVal(cty.Number)
+		if got.GoString() != want.GoString() {
+			t.Errorf("got type = %s, want %s", got.Type(), want.Type())
+		}
+	})
 	t.Run("float", func(t *testing.T) {
 		t.Parallel()
 		v := 1234.5678
@@ -138,6 +150,18 @@ func TestMarshalCTYValue__Slice(t *testing.T) {
 		}
 		if got.AsValueSlice()[1] != want.AsValueSlice()[1] {
 			t.Errorf("got = %s, want %s", got, want)
+		}
+	})
+	t.Run("[]string empty", func(t *testing.T) {
+		t.Parallel()
+		v := []string{}
+		got, err := hclutil.MarshalCTYValue(v)
+		if err != nil {
+			t.Error(err)
+		}
+		want := cty.ListValEmpty(cty.String)
+		if got.Type().GoString() != want.Type().GoString() {
+			t.Errorf("got type = %s, want %s", got.Type(), want.Type())
 		}
 	})
 	t.Run("integer", func(t *testing.T) {
@@ -710,6 +734,19 @@ func TestMarshalCTYValue__TupleList(t *testing.T) {
 			cty.StringVal("hoge"),
 			cty.True,
 		})
+		if got.GoString() != want.GoString() {
+			t.Errorf("got = %s, want %s", got.GoString(), want.GoString())
+			t.FailNow()
+		}
+	})
+	t.Run("[]interface{} empty", func(t *testing.T) {
+		v := []interface{}{}
+		got, err := hclutil.MarshalCTYValue(v)
+		if err != nil {
+			t.Error(err)
+			t.FailNow()
+		}
+		want := cty.EmptyTupleVal
 		if got.GoString() != want.GoString() {
 			t.Errorf("got = %s, want %s", got.GoString(), want.GoString())
 			t.FailNow()
