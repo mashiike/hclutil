@@ -1,5 +1,9 @@
 # Changelog
 
+## [v0.5.3](https://github.com/mashiike/hclutil/compare/v0.5.2...v0.5.3) - 2023-09-19
+- Bump github.com/google/go-cmp from 0.3.1 to 0.5.9 by @dependabot in https://github.com/mashiike/hclutil/pull/23
+- fix misc, panic ,coalesce by @mashiike in https://github.com/mashiike/hclutil/pull/24
+
 ## [v0.5.2](https://github.com/mashiike/hclutil/compare/v0.5.1...v0.5.2) - 2023-09-18
 - fix nilVal unmarshal, panic... set zero value by @mashiike in https://github.com/mashiike/hclutil/pull/20
 - if duty-path, can not fetch file. by @mashiike in https://github.com/mashiike/hclutil/pull/22
