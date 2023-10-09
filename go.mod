@@ -8,7 +8,7 @@ require (
 	github.com/hashicorp/hcl/v2 v2.18.0
 	github.com/lestrrat-go/strftime v1.0.6
 	github.com/stretchr/testify v1.8.4
-	github.com/zclconf/go-cty v1.14.0
+	github.com/zclconf/go-cty v1.14.1
 	github.com/zclconf/go-cty-yaml v1.0.3
 	golang.org/x/term v0.12.0
 )
