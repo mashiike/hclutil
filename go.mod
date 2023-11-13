@@ -10,7 +10,7 @@ require (
 	github.com/stretchr/testify v1.8.4
 	github.com/zclconf/go-cty v1.14.0
 	github.com/zclconf/go-cty-yaml v1.0.3
-	golang.org/x/term v0.12.0
+	golang.org/x/term v0.14.0
 )
 
 require (
@@ -21,7 +21,7 @@ require (
 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	golang.org/x/sys v0.12.0 // indirect
+	golang.org/x/sys v0.14.0 // indirect
 	golang.org/x/text v0.13.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
